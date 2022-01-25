@@ -58,23 +58,6 @@ class force_predictor:
             if self.fingers_state[i] > self.MIN:
                 self.fingers_state[i] -= self.velocity
     
-    def double_flex(self):
-        for i, m in self.fingers_state.items():
-            if i == 'index_control' or i == 'middle_control':
-                if self.fingers_state[i] < self.MAX:
-                    # predict velocity by reg2
-                    feature_tmp =self.scaler_x_middle(self.feature_tmp)
-                    pred_f = self.reg_middle(feature_tmp)
-                    pred_f_tmp = self.scaler_y_middle.inverse_transform(pred_f) * 0.012 / self.scaler_y_middle.data_max_
-                    
-                    print(pred_f[0])
-                    if pred_f > self.MAX:
-                        pred_f_tmp = self.MAX
-                    self.fingers_state[i] = pred_f_tmp
-            else:
-                if self.fingers_state[i] > self.MIN:
-                    self.fingers_state[i] -= self.velocity
-    
     def _flex(self, flexion_finger_list, scaler_x, scaler_y, reg_model):
         for i, m in self.fingers_state.items():
             if i in flexion_finger_list:
@@ -82,9 +65,9 @@ class force_predictor:
                     
                     feature_tmp = scaler_x(self.feature_tmp)
                     pred_f = reg_model(feature_tmp)
-                    pred_f_tmp = scaler_y.inverse_transform(pred_f) * 0.012 / scaler_y.data_max_
+                    pred_f_tmp = np.mean(scaler_y.inverse_transform(pred_f) * 0.012 / scaler_y.data_max_)
                     
-                    print(pred_f[0])
+                    print(pred_f_tmp)
                     if pred_f > self.MAX:
                         pred_f_tmp = self.MAX
                     self.fingers_state[i] = pred_f_tmp
