@@ -6,7 +6,7 @@
 ## rosrun hri_hand_control hri_joint_state_pub.py
 
 
-from velocity import velocity_predictor, control
+from force_predition import force_predictor, control
 from predict_pattern import predict_pattern_int
 import rospy, time, tf
 from sensor_msgs.msg import JointState
@@ -38,7 +38,7 @@ class STM_serial():
         self.ser.write(bytes(bytearray([motor_id])))
         self.ser.write(bytes(bytearray([motor_val])))        
 
-        print "serial class: ", motor_id, motor_val
+        print("serial class: ", motor_id, motor_val)
         '''
         if self.ser.readable():
             RxValue = self.ser.readline()
@@ -220,7 +220,7 @@ class HJ_hand_tf():
             if self.pri_index < 0.0:
                 self.in_bend_flag = 0
 
-        print "index_talker pri_index: ", self.pri_index
+        print("index_talker pri_index: ", self.pri_index)
 
         self.in_rad_goal[0] = 1000*self.pri_index *(self.rad_max[0]/12)
         self.in_rad_goal[1] = 1000*self.pri_index *(self.rad_max[1]/12)
@@ -330,7 +330,7 @@ class HJ_hand_tf():
             if self.pri_thumb < 0.0:
                 self.th_bend_flag = 0
 
-        print "pri_thumb, th_bend_flag", self.pri_thumb, self.th_bend_flag
+        print("pri_thumb, th_bend_flag", self.pri_thumb, self.th_bend_flag)
 
         self.th_rad_goal[0] = 1000*self.pri_thumb * (self.rad_max[0]/12)
         self.th_rad_goal[1] = 1000*self.pri_thumb * (0.523599/12)  #30 degree 
@@ -466,7 +466,7 @@ class HJ_hand_tf():
         #print "pri index: ", self.pri_index
         send_pris_val = self.pri_index * 1000
         send_pris_val = int(send_pris_val)
-        print "send pris: ", send_pris_val
+        print("send pris: ", send_pris_val)
         
         if send_pris_val < 0:
             pass
@@ -484,7 +484,7 @@ class HJ_hand_tf():
         #print "pri index: ", self.pri_index
         send_pris_val = self.pri_middle * 1000
         send_pris_val = int(send_pris_val)
-        print "send pris: ", send_pris_val
+        print("send pris: ", send_pris_val)
         
         if send_pris_val < 0:
             pass
@@ -502,7 +502,7 @@ class HJ_hand_tf():
         #print "pri index: ", self.pri_index
         send_pris_val = self.pri_ring * 1000
         send_pris_val = int(send_pris_val)
-        print "send pris: ", send_pris_val
+        print("send pris: ", send_pris_val)
         
         if send_pris_val < 0:
             pass
@@ -520,7 +520,7 @@ class HJ_hand_tf():
         #print "pri index: ", self.pri_index
         send_pris_val = self.pri_little * 1000
         send_pris_val = int(send_pris_val)
-        print "send pris: ", send_pris_val
+        print("send pris: ", send_pris_val)
         
         if send_pris_val < 0:
             pass
@@ -531,10 +531,10 @@ class HJ_hand_tf():
 
 
     def hj_finger_control(self, my_motor_id, my_pris_val):
-        print "pri index: ", my_pris_val
+        print("pri index: ", my_pris_val)
         stm_pris_val = my_pris_val * 1000      #converting unit [m] to [mm]
         stm_pris_val = int(stm_pris_val)    #converting to integer
-        print "send pris: ", stm_pris_val
+        print("send pris: ", stm_pris_val)
 
         if stm_pris_val < 0:
             pass
@@ -576,49 +576,20 @@ class HJ_hand_tf():
             hj_tf.rate.sleep()
 
 
-
-def worker1(m, start):
-    m.connect()
-    while not rospy.is_shutdown():
-        m.run(1)
-        #emg_ = m.emg
-        #print('worker, ' + str(len(emg_)))
-        if time.time() -start >=30:
-            break
-
-def worker2(m, start, N, _pattern_pred, _velocity_pred, c):
-    _s = start
-    while not rospy.is_shutdown():
-        if len(m.emg_array) == N and (time.time() - _s) >= 0.050:
-            _s = time.time()
-            pred_int, processed_data = _pattern_pred.predict(m.emg_array, m.acc_array, m.gyro_array)
-            fingers_state = _velocity_pred(pred_int, processed_data)
-            c.move(fingers_state)
-        if time.time() -start >=30:
-            break
-
-def stop():
-    while not rospy.is_shutdown():
-        n = input()
-        if n == "e":
-            print("Terminate")
-            sys.exit()
-
-
 if __name__ == '__main__':
     flag = True
     serial_flag = False
-    N = 30
+    N = 1
     if serial_flag:
         stmser = STM_serial('/dev/ttyACM0')
     hj_tf = HJ_hand_tf(serial_flag)
 
     if flag:
-        _velocity_pred = velocity_predictor('hashimoto_model')
+        _force_pred = force_predictor('nakashima_model')
         c = control(hj_tf)
         
         m = MyoRaw(N, tty='/dev/ttyACM0')
-        _pattern_pred = predict_pattern_int(N, 'hashimoto_model', ch_list=[0,1,2,5,6], net_tmp_flag=True)
+        # _pattern_pred = predict_pattern_int(N, 'hashimoto_model', ch_list=[0,1,2,5,6], net_tmp_flag=True)
 
         
         start = time.time()
@@ -628,20 +599,12 @@ if __name__ == '__main__':
             m.run(1)
             emg = m.emg_array
             if len(emg) == N:
-                pred_int, processed_data = _pattern_pred.predict(m.emg_array, m.acc_array, m.gyro_array)
-                fingers_state = _velocity_pred(pred_int, processed_data)
+                pred_int = 0
+                fingers_state = _force_pred(pred_int)
                 c.move(fingers_state)
-                m.emg_array.clear()
+                #m.emg_array.clear()
                 #time.sleep(1)
-        '''
-        t1 = threading.Thread(target=worker1, args=(m, start,))
-        t2 = threading.Thread(target=worker2, args=(m, start, N, _pattern_pred, _velocity_pred, c,))
-        t1.setDaemon(True)
-        t2.setDaemon(True)
-        # スレッドスタート
-        t1.start()
-        t2.start()
-        stop()'''
+        
 
         m.disconnect()
         
