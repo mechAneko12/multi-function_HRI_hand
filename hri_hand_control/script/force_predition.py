@@ -2,8 +2,7 @@ import time
 import pickle 
 from keras.models import load_model
 import numpy as np
-import sys
-sys.path.append('../../')
+from pathlib import Path
 
 class force_predictor:
     def __init__(self, dataset_name, MIN=0, MAX=0.012, velocity=0.001):
@@ -20,12 +19,14 @@ class force_predictor:
         self.MAX = MAX
         self.velocity = velocity
         
-        with open(dataset_name + '/' + 'scaler_x_middle.pickle', mode='rb') as fp:
+        path = Path(__file__).parent / dataset_name + '/trained_model/'
+        
+        with open(path / 'scaler_x_middle.pickle', mode='rb') as fp:
             self.scaler_x_middle = pickle.load(fp)
-        with open(dataset_name + '/' + 'scaler_y_middle.pickle', mode='rb') as fp:
+        with open(path / 'scaler_y_middle.pickle', mode='rb') as fp:
             self.scaler_y_middle = pickle.load(fp)
 
-        self.reg_middle = load_model(dataset_name + '/' + 'model_MLP.h5')
+        self.reg_middle = load_model(path / 'reg_middle.h5')
 
         self.feature_tmp = None
 
